@@ -67,6 +67,7 @@ export interface EmailLogEntry {
     studentId: string;
     lastSentDate: string;        // YYYY-MM-DD — controls 1-email-per-day rule
     pendingChanges: Array<{
+        classId: string;
         goal: EvaluationGoal;
         value: EvaluationValue;
         changedAt: string;

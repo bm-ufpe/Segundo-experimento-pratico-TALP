@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { readDb, writeDb } from '../data/db';
 import { studentService } from './studentService';
+import { classService } from './classService';
 import type { EmailLogEntry, EvaluationGoal, EvaluationValue } from '../types/index';
 
 const DB = 'emailLog';
@@ -25,17 +26,23 @@ function createTransporter() {
 }
 
 class EmailService {
-    // Add a pending change for the student. Actual sending is deferred.
-    queueChange(studentId: string, goal: EvaluationGoal, value: EvaluationValue): void {
+    /**
+     * Register an evaluation change for a student.
+     * Each (classId, goal) pair keeps only the latest value; duplicate entries are replaced.
+     * Sending is attempted immediately but skipped if an email was already sent today.
+     */
+    queueChange(studentId: string, classId: string, goal: EvaluationGoal, value: EvaluationValue): void {
         const log = readDb<EmailLogEntry>(DB);
         const idx = log.findIndex(e => e.studentId === studentId);
-        const change = { goal, value, changedAt: new Date().toISOString() };
+        const change = { classId, goal, value, changedAt: new Date().toISOString() };
 
         if (idx === -1) {
             log.push({ studentId, lastSentDate: '', pendingChanges: [change] });
         } else {
-            // Replace duplicate goal entry with newest value
-            log[idx].pendingChanges = log[idx].pendingChanges.filter(c => c.goal !== goal);
+            // Replace existing entry for the same (classId, goal) pair with the newest value
+            log[idx].pendingChanges = log[idx].pendingChanges.filter(
+                c => !(c.classId === classId && c.goal === goal)
+            );
             log[idx].pendingChanges.push(change);
         }
 
@@ -43,37 +50,51 @@ class EmailService {
         this.flushIfNeeded(studentId);
     }
 
-    // Send consolidated email if not yet sent today
-    private async flushIfNeeded(studentId: string): Promise<void> {
+    // Send a consolidated email if no email has been sent today yet for this student.
+    // State update (lastSentDate + clear pendingChanges) is synchronous so callers
+    // see a consistent log immediately. The actual SMTP delivery is fire-and-forget.
+    private flushIfNeeded(studentId: string): void {
         const log = readDb<EmailLogEntry>(DB);
         const idx = log.findIndex(e => e.studentId === studentId);
         if (idx === -1 || log[idx].pendingChanges.length === 0) return;
-        if (log[idx].lastSentDate === today()) return; // already sent today
+        if (log[idx].lastSentDate === today()) return; // 1-per-day rule
 
         const student = studentService.get(studentId);
         if (!student) return;
 
+        // Group pending changes by class for a structured email body
         const changes = log[idx].pendingChanges;
-        const lines = changes.map(c => `  • ${c.goal}: ${c.value}`).join('\n');
-        const body = `Olá, ${student.name}!\n\nSuas avaliações foram atualizadas:\n\n${lines}\n\nAtenciosamente,\nSistema de Avaliações`;
-
-        try {
-            const transporter = createTransporter();
-            const info = await transporter.sendMail({
-                from: process.env.SMTP_FROM ?? 'sistema@provas.local',
-                to: student.email,
-                subject: 'Suas avaliações foram atualizadas',
-                text: body,
-            });
-            console.log(`[email] Enviado para ${student.email}`, (info as any).message ?? '');
-        } catch (err) {
-            console.error('[email] Falha ao enviar:', err);
-            return; // don't update log — will retry next change
+        const byClass = new Map<string, typeof changes>();
+        for (const c of changes) {
+            if (!byClass.has(c.classId)) byClass.set(c.classId, []);
+            byClass.get(c.classId)!.push(c);
         }
 
+        const sections = [...byClass.entries()].map(([cid, cls]) => {
+            const info   = classService.get(cid);
+            const header = info ? `[${info.description} — ${info.year}/${info.semester}º sem.]` : `[Turma ${cid}]`;
+            const lines  = cls.map(c => `  • ${c.goal}: ${c.value}`).join('\n');
+            return `${header}\n${lines}`;
+        }).join('\n\n');
+
+        const body = `Olá, ${student.name}!\n\nSuas avaliações foram atualizadas:\n\n${sections}\n\nAtenciosamente,\nSistema de Avaliações`;
+
+        // Mark as sent synchronously — the 1-per-day gate must be visible immediately
         log[idx].lastSentDate = today();
         log[idx].pendingChanges = [];
         writeDb(DB, log);
+
+        // Fire-and-forget: delivery failure is logged but doesn't roll back state
+        createTransporter().sendMail({
+            from: process.env.SMTP_FROM ?? 'sistema@provas.local',
+            to: student.email,
+            subject: 'Suas avaliações foram atualizadas',
+            text: body,
+        }).then(info => {
+            console.log(`[email] Enviado para ${student.email}`, (info as any).message ?? '');
+        }).catch(err => {
+            console.error('[email] Falha ao enviar:', err);
+        });
     }
 }
 

@@ -35,7 +35,7 @@ class EvaluationService {
         writeDb(DB, all);
 
         // Queue email notification (respects 1-per-day rule)
-        emailService.queueChange(req.studentId, req.goal, req.value);
+        emailService.queueChange(req.studentId, classId, req.goal, req.value);
 
         return evaluation;
     }
