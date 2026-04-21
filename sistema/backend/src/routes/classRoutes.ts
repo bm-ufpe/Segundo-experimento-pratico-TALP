@@ -5,12 +5,15 @@ import type { CreateClassRequest, UpdateClassRequest, UpsertEvaluationRequest } 
 
 const router = Router();
 
+const id  = (req: Request): string => String(req.params.id);
+const sid = (req: Request): string => String(req.params.studentId);
+
 router.get('/', (_req: Request, res: Response) => {
     res.json(classService.list());
 });
 
 router.get('/:id', (req: Request, res: Response) => {
-    const cls = classService.get(req.params.id);
+    const cls = classService.get(id(req));
     if (!cls) return res.status(404).json({ error: 'Turma não encontrada' });
     return res.json(cls);
 });
@@ -25,7 +28,7 @@ router.post('/', (req: Request, res: Response) => {
 
 router.put('/:id', (req: Request, res: Response) => {
     try {
-        return res.json(classService.update(req.params.id, req.body as UpdateClassRequest));
+        return res.json(classService.update(id(req), req.body as UpdateClassRequest));
     } catch (err) {
         const msg = (err as Error).message;
         return res.status(msg.includes('não encontrada') ? 404 : 400).json({ error: msg });
@@ -33,8 +36,8 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 router.delete('/:id', (req: Request, res: Response) => {
-    evaluationService.deleteByClass(req.params.id);
-    const deleted = classService.delete(req.params.id);
+    evaluationService.deleteByClass(id(req));
+    const deleted = classService.delete(id(req));
     if (!deleted) return res.status(404).json({ error: 'Turma não encontrada' });
     return res.status(204).send();
 });
@@ -42,7 +45,7 @@ router.delete('/:id', (req: Request, res: Response) => {
 // Manage students in class
 router.post('/:id/students', (req: Request, res: Response) => {
     try {
-        return res.json(classService.addStudent(req.params.id, req.body.studentId));
+        return res.json(classService.addStudent(id(req), req.body.studentId));
     } catch (err) {
         return res.status(400).json({ error: (err as Error).message });
     }
@@ -50,7 +53,7 @@ router.post('/:id/students', (req: Request, res: Response) => {
 
 router.delete('/:id/students/:studentId', (req: Request, res: Response) => {
     try {
-        return res.json(classService.removeStudent(req.params.id, req.params.studentId));
+        return res.json(classService.removeStudent(id(req), sid(req)));
     } catch (err) {
         return res.status(400).json({ error: (err as Error).message });
     }
@@ -58,12 +61,12 @@ router.delete('/:id/students/:studentId', (req: Request, res: Response) => {
 
 // Evaluations for a class
 router.get('/:id/evaluations', (req: Request, res: Response) => {
-    res.json(evaluationService.listByClass(req.params.id));
+    res.json(evaluationService.listByClass(id(req)));
 });
 
 router.put('/:id/evaluations', (req: Request, res: Response) => {
     try {
-        return res.json(evaluationService.upsert(req.params.id, req.body as UpsertEvaluationRequest));
+        return res.json(evaluationService.upsert(id(req), req.body as UpsertEvaluationRequest));
     } catch (err) {
         return res.status(400).json({ error: (err as Error).message });
     }
