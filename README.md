@@ -6,7 +6,7 @@ Sistema web para gerenciamento de alunos, turmas e avaliações com notificaçã
 
 | Serviço | URL |
 |---------|-----|
-| **Frontend** (Vercel) | _adicione aqui o link da Vercel_ |
+| **Frontend** (Vercel) |https://segundo-experimento-pratico-talp.vercel.app/|
 | **Backend** (Railway) | https://segundo-experimento-pratico-talp-production.up.railway.app |
 
 ## Stack
