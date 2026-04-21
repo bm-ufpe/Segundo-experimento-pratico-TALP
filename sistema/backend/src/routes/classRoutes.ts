@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { classService } from '../services/classService';
 import { evaluationService } from '../services/evaluationService';
+import { NotFoundError } from '../utils/errors';
 import type { CreateClassRequest, UpdateClassRequest, UpsertEvaluationRequest } from '../types/index';
 
 const router = Router();
@@ -30,15 +31,15 @@ router.put('/:id', (req: Request, res: Response) => {
     try {
         return res.json(classService.update(id(req), req.body as UpdateClassRequest));
     } catch (err) {
-        const msg = (err as Error).message;
-        return res.status(msg.includes('não encontrada') ? 404 : 400).json({ error: msg });
+        return res.status(err instanceof NotFoundError ? 404 : 400).json({ error: (err as Error).message });
     }
 });
 
 router.delete('/:id', (req: Request, res: Response) => {
+    const cls = classService.get(id(req));
+    if (!cls) return res.status(404).json({ error: 'Turma não encontrada' });
     evaluationService.deleteByClass(id(req));
-    const deleted = classService.delete(id(req));
-    if (!deleted) return res.status(404).json({ error: 'Turma não encontrada' });
+    classService.delete(id(req));
     return res.status(204).send();
 });
 
@@ -47,7 +48,7 @@ router.post('/:id/students', (req: Request, res: Response) => {
     try {
         return res.json(classService.addStudent(id(req), req.body.studentId));
     } catch (err) {
-        return res.status(400).json({ error: (err as Error).message });
+        return res.status(err instanceof NotFoundError ? 404 : 400).json({ error: (err as Error).message });
     }
 });
 

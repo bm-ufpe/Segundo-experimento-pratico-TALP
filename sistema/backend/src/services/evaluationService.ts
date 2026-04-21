@@ -5,12 +5,17 @@ import type { Evaluation, UpsertEvaluationRequest } from '../types/index';
 
 const DB = 'evaluations';
 
+const VALID_GOALS = new Set(['Requisitos', 'Testes', 'Implementação', 'Documentação']);
+const VALID_VALUES = new Set(['MANA', 'MPA', 'MA']);
+
 class EvaluationService {
     listByClass(classId: string): Evaluation[] {
         return readDb<Evaluation>(DB).filter(e => e.classId === classId);
     }
 
     upsert(classId: string, req: UpsertEvaluationRequest): Evaluation {
+        if (!VALID_GOALS.has(req.goal)) throw new Error(`Objetivo inválido: "${req.goal}"`);
+        if (!VALID_VALUES.has(req.value)) throw new Error(`Valor inválido: "${req.value}"`);
         const all = readDb<Evaluation>(DB);
         const idx = all.findIndex(
             e => e.classId === classId && e.studentId === req.studentId && e.goal === req.goal

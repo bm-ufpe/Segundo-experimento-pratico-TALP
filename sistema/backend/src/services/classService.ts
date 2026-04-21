@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import { readDb, writeDb } from '../data/db';
 import { requireFields } from '../utils/validation';
+import { NotFoundError } from '../utils/errors';
 import type { Class, CreateClassRequest, UpdateClassRequest } from '../types/index';
 
 const DB = 'classes';
@@ -44,7 +45,7 @@ class ClassService {
 
         const classes = this.list();
         const idx = classes.findIndex(c => c.id === id);
-        if (idx === -1) throw new Error(`Turma ${id} não encontrada`);
+        if (idx === -1) throw new NotFoundError(`Turma ${id} não encontrada`);
 
         const updated: Class = {
             ...classes[idx],
@@ -68,7 +69,11 @@ class ClassService {
     addStudent(classId: string, studentId: string): Class {
         const classes = this.list();
         const idx = classes.findIndex(c => c.id === classId);
-        if (idx === -1) throw new Error(`Turma ${classId} não encontrada`);
+        if (idx === -1) throw new NotFoundError(`Turma ${classId} não encontrada`);
+        const students = readDb<{ id: string }>('students');
+        if (!students.some(s => s.id === studentId)) {
+            throw new NotFoundError(`Aluno ${studentId} não encontrado`);
+        }
         if (classes[idx].studentIds.includes(studentId)) {
             throw new Error('Aluno já está na turma');
         }
@@ -80,7 +85,7 @@ class ClassService {
     removeStudent(classId: string, studentId: string): Class {
         const classes = this.list();
         const idx = classes.findIndex(c => c.id === classId);
-        if (idx === -1) throw new Error(`Turma ${classId} não encontrada`);
+        if (idx === -1) throw new NotFoundError(`Turma ${classId} não encontrada`);
         classes[idx].studentIds = classes[idx].studentIds.filter(id => id !== studentId);
         writeDb(DB, classes);
         return classes[idx];

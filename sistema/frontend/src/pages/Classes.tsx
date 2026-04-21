@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './Classes.css';
+import { API } from '../lib/api';
 
 interface Student {
     id: string;
@@ -15,8 +16,6 @@ interface Class {
     semester: 1 | 2;
     studentIds: string[];
 }
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export function Classes() {
     const [classes,  setClasses]  = useState<Class[]>([]);

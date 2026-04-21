@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid';
 import { readDb, writeDb } from '../data/db';
 import { validateEmail, requireFields } from '../utils/validation';
+import { NotFoundError } from '../utils/errors';
 import type { Student, CreateStudentRequest, UpdateStudentRequest } from '../types/index';
 
 const DB = 'students';
@@ -39,7 +40,7 @@ class StudentService {
 
         const students = this.list();
         const idx = students.findIndex(s => s.id === id);
-        if (idx === -1) throw new Error(`Aluno ${id} não encontrado`);
+        if (idx === -1) throw new NotFoundError(`Aluno ${id} não encontrado`);
 
         if (req.cpf && students.some(s => s.cpf === req.cpf && s.id !== id)) {
             throw new Error('CPF já cadastrado');

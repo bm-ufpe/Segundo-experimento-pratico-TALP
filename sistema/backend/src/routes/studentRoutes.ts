@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { studentService } from '../services/studentService';
+import { NotFoundError } from '../utils/errors';
 import type { CreateStudentRequest, UpdateStudentRequest } from '../types/index';
 
 const router = Router();
@@ -28,8 +29,7 @@ router.put('/:id', (req: Request, res: Response) => {
     try {
         return res.json(studentService.update(id(req), req.body as UpdateStudentRequest));
     } catch (err) {
-        const msg = (err as Error).message;
-        return res.status(msg.includes('não encontrado') ? 404 : 400).json({ error: msg });
+        return res.status(err instanceof NotFoundError ? 404 : 400).json({ error: (err as Error).message });
     }
 });
 

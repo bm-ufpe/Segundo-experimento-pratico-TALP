@@ -11,7 +11,12 @@ export function readDb<T>(name: string): T[] {
     const fp = filePath(name);
     if (!fs.existsSync(fp)) return [];
     const raw = fs.readFileSync(fp, 'utf-8');
-    return JSON.parse(raw) as T[];
+    try {
+        return JSON.parse(raw) as T[];
+    } catch {
+        console.error(`[db] corrupt JSON in ${name}.json — returning empty array`);
+        return [];
+    }
 }
 
 export function writeDb<T>(name: string, data: T[]): void {

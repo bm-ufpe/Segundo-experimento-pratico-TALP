@@ -5,6 +5,7 @@ import { Students } from './pages/Students';
 import { Classes } from './pages/Classes';
 import { Evaluations } from './pages/Evaluations';
 import './index.css';
+import './pages/shared.css';
 
 function App() {
   return (

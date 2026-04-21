@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './Evaluations.css';
+import { API } from '../lib/api';
 
 interface Student { id: string; name: string; cpf: string; email: string; }
 interface Class   { id: string; description: string; year: number; semester: 1 | 2; studentIds: string[]; }
@@ -10,8 +11,6 @@ type EvaluationGoal  = 'Requisitos' | 'Testes' | 'Implementação' | 'Documenta�
 
 const GOALS: EvaluationGoal[] = ['Requisitos', 'Testes', 'Implementação', 'Documentação'];
 const VALUES: EvaluationValue[] = ['MANA', 'MPA', 'MA'];
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export function Evaluations() {
     const [classes,     setClasses]     = useState<Class[]>([]);
