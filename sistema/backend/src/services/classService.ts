@@ -1,8 +1,18 @@
 import { v4 as uuid } from 'uuid';
 import { readDb, writeDb } from '../data/db';
+import { requireFields } from '../utils/validation';
 import type { Class, CreateClassRequest, UpdateClassRequest } from '../types/index';
 
 const DB = 'classes';
+
+function validateClass(req: Partial<CreateClassRequest>): void {
+    if (req.year !== undefined && (!Number.isInteger(req.year) || req.year < 2000 || req.year > 2100)) {
+        throw new Error('Ano inválido (esperado entre 2000 e 2100)');
+    }
+    if (req.semester !== undefined && req.semester !== 1 && req.semester !== 2) {
+        throw new Error('Semestre inválido (esperado 1 ou 2)');
+    }
+}
 
 class ClassService {
     list(): Class[] {
@@ -14,9 +24,14 @@ class ClassService {
     }
 
     create(req: CreateClassRequest): Class {
+        requireFields(req as unknown as Record<string, unknown>, ['description', 'year', 'semester']);
+        validateClass(req);
+
         const cls: Class = {
             id: uuid(),
-            ...req,
+            description: req.description.trim(),
+            year: req.year,
+            semester: req.semester,
             studentIds: [],
             createdAt: new Date().toISOString(),
         };
@@ -25,10 +40,18 @@ class ClassService {
     }
 
     update(id: string, req: UpdateClassRequest): Class {
+        validateClass(req);
+
         const classes = this.list();
         const idx = classes.findIndex(c => c.id === id);
         if (idx === -1) throw new Error(`Turma ${id} não encontrada`);
-        const updated = { ...classes[idx], ...req };
+
+        const updated: Class = {
+            ...classes[idx],
+            ...(req.description !== undefined && { description: req.description.trim() }),
+            ...(req.year      !== undefined && { year: req.year }),
+            ...(req.semester  !== undefined && { semester: req.semester }),
+        };
         classes[idx] = updated;
         writeDb(DB, classes);
         return updated;
