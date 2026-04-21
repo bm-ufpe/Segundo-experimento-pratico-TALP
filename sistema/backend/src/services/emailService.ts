@@ -79,12 +79,12 @@ class EmailService {
 
         const body = `Olá, ${student.name}!\n\nSuas avaliações foram atualizadas:\n\n${sections}\n\nAtenciosamente,\nSistema de Avaliações`;
 
-        // Mark as sent synchronously — the 1-per-day gate must be visible immediately
+        // Optimistically mark as sent to prevent concurrent duplicate sends
+        const pendingSnapshot = [...log[idx].pendingChanges];
         log[idx].lastSentDate = today();
         log[idx].pendingChanges = [];
         writeDb(DB, log);
 
-        // Fire-and-forget: delivery failure is logged but doesn't roll back state
         createTransporter().sendMail({
             from: process.env.SMTP_FROM ?? 'sistema@provas.local',
             to: student.email,
@@ -94,6 +94,17 @@ class EmailService {
             console.log(`[email] Enviado para ${student.email}`, (info as any).message ?? '');
         }).catch(err => {
             console.error('[email] Falha ao enviar:', err);
+            // Roll back so the next change triggers a retry
+            const current = readDb<EmailLogEntry>(DB);
+            const i = current.findIndex(e => e.studentId === studentId);
+            if (i !== -1) {
+                current[i].lastSentDate = '';
+                current[i].pendingChanges = [
+                    ...pendingSnapshot,
+                    ...current[i].pendingChanges,
+                ];
+                writeDb(DB, current);
+            }
         });
     }
 }
