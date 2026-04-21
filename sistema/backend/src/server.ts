@@ -11,7 +11,6 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
-app.delete('/admin/email-log', (_req, res) => { const { writeDb } = require('./data/db'); writeDb('emailLog', []); res.json({ ok: true }); });
 app.use('/students', studentRoutes);
 app.use('/classes', classRoutes);
 
