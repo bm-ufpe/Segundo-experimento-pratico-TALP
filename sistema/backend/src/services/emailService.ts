@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { readDb, writeDb } from '../data/db';
 import { studentService } from './studentService';
 import { classService } from './classService';
@@ -10,19 +11,23 @@ function today(): string {
     return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
-function createTransporter() {
-    const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+async function sendEmail(to: string, subject: string, text: string): Promise<void> {
+    const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
+    const from = SMTP_FROM ?? 'sistema@provas.local';
 
-    if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-        return nodemailer.createTransport({
-            host: SMTP_HOST,
-            port: Number(SMTP_PORT ?? 587),
-            auth: { user: SMTP_USER, pass: SMTP_PASS },
-        });
+    // Use Resend HTTP API when configured — Railway blocks outbound SMTP ports
+    if (SMTP_HOST?.includes('resend.com') && SMTP_PASS) {
+        const resend = new Resend(SMTP_PASS);
+        await resend.emails.send({ from, to, subject, text });
+        return;
     }
 
-    // Development fallback: logs to console instead of sending
-    return nodemailer.createTransport({ jsonTransport: true });
+    // Nodemailer fallback (local dev or non-blocked SMTP)
+    const transporter = (SMTP_HOST && SMTP_USER && SMTP_PASS)
+        ? nodemailer.createTransport({ host: SMTP_HOST, port: Number(SMTP_PORT ?? 587), auth: { user: SMTP_USER, pass: SMTP_PASS } })
+        : nodemailer.createTransport({ jsonTransport: true });
+
+    await transporter.sendMail({ from, to, subject, text });
 }
 
 class EmailService {
@@ -85,24 +90,16 @@ class EmailService {
         log[idx].pendingChanges = [];
         writeDb(DB, log);
 
-        createTransporter().sendMail({
-            from: process.env.SMTP_FROM ?? 'sistema@provas.local',
-            to: student.email,
-            subject: 'Suas avaliações foram atualizadas',
-            text: body,
-        }).then(info => {
-            console.log(`[email] Enviado para ${student.email}`, (info as any).message ?? '');
-        }).catch(err => {
+        sendEmail(student.email, 'Suas avaliações foram atualizadas', body)
+        .then(() => {
+            console.log(`[email] Enviado para ${student.email}`);
+        }).catch((err: Error) => {
             console.error('[email] Falha ao enviar:', err);
-            // Roll back so the next change triggers a retry
             const current = readDb<EmailLogEntry>(DB);
             const i = current.findIndex(e => e.studentId === studentId);
             if (i !== -1) {
                 current[i].lastSentDate = '';
-                current[i].pendingChanges = [
-                    ...pendingSnapshot,
-                    ...current[i].pendingChanges,
-                ];
+                current[i].pendingChanges = [...pendingSnapshot, ...current[i].pendingChanges];
                 writeDb(DB, current);
             }
         });
