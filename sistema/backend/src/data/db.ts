@@ -14,7 +14,9 @@ export function readDb<T>(name: string): T[] {
     try {
         return JSON.parse(raw) as T[];
     } catch {
-        console.error(`[db] corrupt JSON in ${name}.json — returning empty array`);
+        const backup = `${fp}.corrupt`;
+        fs.renameSync(fp, backup);
+        console.error(`[db] corrupt JSON in ${name}.json — moved to ${name}.json.corrupt, starting empty`);
         return [];
     }
 }

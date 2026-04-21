@@ -70,7 +70,7 @@ class ClassService {
         const classes = this.list();
         const idx = classes.findIndex(c => c.id === classId);
         if (idx === -1) throw new NotFoundError(`Turma ${classId} não encontrada`);
-        const students = readDb<{ id: string }>('students');
+        const students = readDb<{ id: string }>('students'); // acesso direto para evitar dep. circular com studentService
         if (!students.some(s => s.id === studentId)) {
             throw new NotFoundError(`Aluno ${studentId} não encontrado`);
         }

@@ -56,7 +56,7 @@ router.delete('/:id/students/:studentId', (req: Request, res: Response) => {
     try {
         return res.json(classService.removeStudent(id(req), sid(req)));
     } catch (err) {
-        return res.status(400).json({ error: (err as Error).message });
+        return res.status(err instanceof NotFoundError ? 404 : 400).json({ error: (err as Error).message });
     }
 });
 

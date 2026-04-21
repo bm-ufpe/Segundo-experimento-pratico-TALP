@@ -127,8 +127,8 @@ export function Evaluations() {
                             {enrolledStudents.map(s => (
                                 <tr key={s.id}>
                                     <td className="td-student">
-                                        <span className="student-name">{s.name}</span>
-                                        <span className="student-cpf">{s.cpf}</span>
+                                        <span className="eval-student-name">{s.name}</span>
+                                        <span className="eval-student-cpf">{s.cpf}</span>
                                     </td>
                                     {GOALS.map(goal => {
                                         const key  = `${s.id}:${goal}`;

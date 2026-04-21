@@ -1,12 +1,12 @@
 import { v4 as uuid } from 'uuid';
 import { readDb, writeDb } from '../data/db';
 import { emailService } from './emailService';
-import type { Evaluation, UpsertEvaluationRequest } from '../types/index';
+import type { Evaluation, UpsertEvaluationRequest, EvaluationGoal, EvaluationValue } from '../types/index';
 
 const DB = 'evaluations';
 
-const VALID_GOALS = new Set(['Requisitos', 'Testes', 'Implementação', 'Documentação']);
-const VALID_VALUES = new Set(['MANA', 'MPA', 'MA']);
+const VALID_GOALS = new Set<EvaluationGoal>(['Requisitos', 'Testes', 'Implementação', 'Documentação']);
+const VALID_VALUES = new Set<EvaluationValue>(['MANA', 'MPA', 'MA']);
 
 class EvaluationService {
     listByClass(classId: string): Evaluation[] {

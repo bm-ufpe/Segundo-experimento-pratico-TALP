@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+*.corrupt
+
+# Runtime data — não commitar estado de produção
+sistema/backend/data/

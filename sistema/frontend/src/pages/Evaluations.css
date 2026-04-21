@@ -76,13 +76,13 @@
     vertical-align: middle;
 }
 
-.student-name {
+.eval-student-name {
     display: block;
     font-weight: 600;
     color: #2c3e50;
 }
 
-.student-cpf {
+.eval-student-cpf {
     display: block;
     font-size: 12px;
     color: #95a5a6;
