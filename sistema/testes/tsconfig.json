@@ -5,8 +5,9 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": { "@backend/*": ["../backend/src/*"] }
-  }
+    "resolveJsonModule": true
+  },
+  "include": [
+    "step_definitions/**/*.ts"
+  ]
 }
